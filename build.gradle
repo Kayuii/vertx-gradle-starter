@@ -1,0 +1,65 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
+buildscript {
+    repositories {
+		maven {
+			url "https://plugins.gradle.org/m2/"
+		}
+    }
+    dependencies {
+        classpath "com.github.jengelman.gradle.plugins:shadow:5.0.0"
+    }
+}
+
+apply plugin: "java"
+apply plugin: "application"
+apply plugin: "com.github.johnrengelman.shadow"
+
+	
+repositories {
+  mavenCentral()
+  jcenter()
+}
+
+def vertxVersion = "3.7.0"
+def junitVersion = "5.3.2"
+def mainVerticleName = "io.vertx.starter.MainVerticle"
+def watchForChange = "src/**/*.java"
+def doOnChange = "${projectDir}/gradlew classes"
+
+mainClassName = "io.vertx.core.Launcher"
+
+
+dependencies {
+  implementation("io.vertx:vertx-core:$vertxVersion")
+
+  testImplementation("io.vertx:vertx-junit5:$vertxVersion")
+  testImplementation("io.vertx:vertx-web-client:$vertxVersion")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:$junitVersion")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitVersion")
+}
+
+sourceSets {
+	main {
+  		java {
+    		srcDirs += "src/main/resources"
+    		srcDirs += "src/main/generated"
+  		}
+	}
+}
+tasks.withType(JavaCompile) {  
+    options.encoding = "UTF-8"  
+}
+
+shadowJar {
+	classifier = "fat"
+	manifest {
+		attributes "Main-Verticle": mainVerticleName
+	}
+	mergeServiceFiles {
+		include "META-INF/services/io.vertx.core.spi.VerticleFactory"
+	}
+}
+run {
+  args = ['run', mainVerticleName, "--redeploy=$watchForChange", "--launcher-class=$mainClassName", "--on-redeploy=$doOnChange"]
+}
